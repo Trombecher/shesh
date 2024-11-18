@@ -1,0 +1,9 @@
+[package]
+name = "shesh"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+crossterm = "0.28.1"
+ollama-rs = "0.2.1"
+phf = { version = "0.11.2", features = ["macros"] }
