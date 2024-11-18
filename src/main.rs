@@ -8,7 +8,7 @@ use crate::eval::lex::TokenIterator;
 use crate::eval::tokens::Token;
 use crate::prompt::print_prompt;
 use crate::text_box::TextBox;
-use crossterm::cursor::{position, MoveTo};
+use crossterm::cursor::{position, MoveTo, MoveToColumn};
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind};
 use crossterm::style::{Print, Stylize};
 use crossterm::terminal::enable_raw_mode;
@@ -24,6 +24,8 @@ fn main() -> ! {
     let syntax_highlighting = false;
     
     loop {
+        queue!(stdout(), MoveToColumn(0));
+    
         print_prompt();
 
         let (min_cursor_position, y) = position()
