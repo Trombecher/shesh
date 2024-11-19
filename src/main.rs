@@ -2,7 +2,6 @@
 
 mod text_box;
 mod read;
-mod commands;
 mod runtime;
 mod prompt;
 
@@ -24,20 +23,22 @@ fn main() -> ! {
     enable_raw_mode().expect("Failed to enable raw mode");
 
     let mut root_scope = new_root_scope();
-    
+
     let mut history = Vec::<(String, usize)>::new();
     let mut history_entry_index: Option<usize>;
     let mut text_box = TextBox::new();
-    
+
     let syntax_highlighting = false;
     
     loop {
+        text_box.clear();
+
         let mut stdout = stdout();
-        
+
         history_entry_index = None;
-        
+
         queue!(stdout, MoveToColumn(0)).expect("Failed to move cursor to column");
-    
+
         print_prompt();
 
         let (min_cursor_position, y) = position()
@@ -68,24 +69,24 @@ fn main() -> ! {
                             let new_history_entry_index = history_entry_index
                                 .unwrap_or_else(|| history.len())
                                 .saturating_sub(1);
-                            
+
                             // Update text box with new history entry
-                            
+
                             text_box.clear();
-                            
+
                             let (str, char_count) = &history[new_history_entry_index];
                             unsafe { text_box.insert_str_with_cached_char_count(str, *char_count); }
-                            
+
                             history_entry_index = Some(new_history_entry_index);
                         }
                         KeyCode::Down => {
                             let max = history.len() - 1;
-                            
+
                             let new_history_entry_index = (history_entry_index
                                 .unwrap_or_else(|| max) + 1).min(max);
 
                             // Update text box with new history entry
-                            
+
                             text_box.clear();
 
                             let (str, char_count) = &history[new_history_entry_index];
@@ -114,19 +115,19 @@ fn main() -> ! {
             if syntax_highlighting {
                 /*
                 let mut token_iterator = Lexer::new(partition);
-                
+
                 loop {
                     let token = match token_iterator.next() {
                         Ok(token) => token,
                         Err(_) => break,
                     };
-                    
+
                     if let Token::EndOfInput = token.value {
                         break;
                     }
-                    
+
                     let (a, b) = text_box.range(token.range);
-                    
+
                     for part in [a, b] {
                         match &token.value {
                             Token::Number(_) => {
@@ -153,29 +154,32 @@ fn main() -> ! {
                 MoveTo(text_box.chars_left_from_cursor() as u16 + min_cursor_position, y)
             ).expect("Failed to print input");
         }
-        
+
         text_box.move_cursor_to_end();
-        
+
         let (input, _) = text_box.parts();
-        
+        history.push((input.to_string(), text_box.chars_left_from_cursor()));
+
         if input.is_empty() {
             continue;
         }
-        
+
         let mut iter = Buffered::new(Lexer::new(Cursor::new(input)));
-        let root_expression = parse(&mut iter, 0).expect("Failed to parse input");
+        let root_expression = if let Ok(expr) = parse(&mut iter, 0) {
+            expr
+        } else {
+            println!("Error: Failed to parse input");
+            continue;
+        };
 
         disable_raw_mode().expect("Failed to disable raw mode");
         let result = eval(&mut root_scope, &root_expression);
         enable_raw_mode().expect("Failed to enable raw mode");
-        
-        history.push((input.to_string(), text_box.chars_left_from_cursor()));
-        text_box.clear();
-        
+
         match result {
             Ok(Value::Nil) => {}
             Ok(value) => {
-                println!("{}= {}", " ".repeat(min_cursor_position as usize), value);
+                println!("= {}", value);
             }
             Err(runtime_error) => {
                 println!("Error: {:?}", runtime_error);

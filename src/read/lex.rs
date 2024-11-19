@@ -82,9 +82,9 @@ impl<'a> Lexer<'a> {
             },
             Some(_) => {
                 let current = self.cursor.pointer();
-                
+
                 while let Some(byte) = self.cursor.peek() {
-                    if !byte.is_ascii_alphanumeric() {
+                    if !byte.is_ascii_alphanumeric() && byte != b'_' {
                         break;
                     }
                     self.cursor.advance();
@@ -107,7 +107,7 @@ impl<'a> Lexer<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     pub fn test_lex() {
         let mut lexer = Lexer::new(Cursor::new(" + - * / ** % 789.012"));
