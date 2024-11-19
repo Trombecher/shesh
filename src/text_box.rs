@@ -1,9 +1,7 @@
-use std::fmt::{Debug, Formatter, Pointer};
-use crate::eval::bytes::Index;
+use std::fmt::{Debug, Formatter};
 use std::mem::{transmute, MaybeUninit};
-use std::ops;
-use std::ops::Range;
 
+#[derive(Clone)]
 pub struct TextBox {
     buffer: Box<[MaybeUninit<u8>]>,
     gap_start: usize,
@@ -139,6 +137,30 @@ impl TextBox {
 
         self.chars_left_from_cursor += 1;
     }
+    
+    #[inline]
+    pub fn insert_str(&mut self, s: &str) {
+        unsafe {
+            self.insert_str_with_cached_char_count(s, s.chars().count());
+        }
+    }
+    
+    pub unsafe fn insert_str_with_cached_char_count(&mut self, s: &str, char_count: usize) {
+        if s.len() > self.gap_size() {
+            todo!("Resize buffer");
+        }
+
+        let new_gap_start = self.gap_start + s.len();
+
+        self.chars_left_from_cursor += char_count;
+
+        (&mut self.buffer[self.gap_start..new_gap_start]).copy_from_slice(unsafe {
+            transmute(s.as_bytes())
+        });
+
+        self.gap_start = new_gap_start;
+    }
+        
 
     #[inline]
     fn gap_size(&self) -> usize {
@@ -188,54 +210,17 @@ impl TextBox {
     pub fn gap_end(&self) -> usize {
         self.gap_end
     }
-    
-    pub fn range(&self, Range { start, end }: Range<Index>) -> (&str, &str) {
-        if (start as usize) < self.gap_start && end as usize >= self.gap_start {
-            let (left, right) = self.parts();
-            (
-                &left[start as usize..self.gap_start],
-                &right[0..end as usize - self.gap_start]
-            )
-        } else if start < self.gap_start as Index {
-            (unsafe {
-                transmute(&self.buffer[start as usize..end as usize])
-            }, "")
-        } else {
-            let gap_size = self.gap_size();
-            
-            ("", unsafe {
-                transmute(&self.buffer[start as usize + gap_size..end as usize + gap_size])
-            })
-        }
-    }
-}
 
-impl ops::Index<Index> for TextBox {
-    type Output = u8;
-
-    fn index(&self, index: Index) -> &Self::Output {
-        if index < self.gap_start as Index {
-            unsafe {
-                self.buffer[index as usize].assume_init_ref()
-            }
-        } else {
-            unsafe {
-                self.buffer[(index + self.gap_end as Index - self.gap_start as Index) as usize].assume_init_ref()
-            }
-        }
-    }
-}
-
-impl ops::IndexMut<Index> for TextBox {
-    fn index_mut(&mut self, index: Index) -> &mut Self::Output {
-        if index < self.gap_start as Index {
-            unsafe {
-                self.buffer[index as usize].assume_init_mut()
-            }
-        } else {
-            unsafe {
-                self.buffer[(index + self.gap_end as Index - self.gap_start as Index) as usize].assume_init_mut()
-            }
-        }
+    #[inline]
+    pub fn move_cursor_to_end(&mut self) {
+        self.chars_left_from_cursor += self.chars_right_from_cursor;
+        self.chars_right_from_cursor = 0;
+        
+        let bytes_to_move = self.buffer.len() - self.gap_end;
+        
+        self.buffer.copy_within(self.gap_end..self.gap_end + bytes_to_move, self.gap_start);
+        
+        self.gap_start += bytes_to_move;
+        self.gap_end += bytes_to_move;
     }
 }

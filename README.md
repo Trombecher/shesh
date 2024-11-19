@@ -12,7 +12,7 @@ Since this is a shell, it is faster to run directly in a terminal emulator. I ha
 It may be necessary to adjust the Windows Terminal executable path in the script, depending on your installation.
 For a fast development cycle, I recommend creating a new profile in Windows Terminal that runs the shell.
 
-## Features To Implement
+## Roadmap
 
 * [ ] Syntax highlighting
 * [ ] Command history
