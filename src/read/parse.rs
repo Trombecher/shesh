@@ -51,8 +51,10 @@ pub fn parse<'a>(iter: &mut Buffered<'a>, min_bp: u8) -> Result<Span<Expression<
     loop {
         let token = iter.peek()?;
 
-        let (end, value) = match token.value {
+        let (end, value) = match &token.value {
             Token::Plus => op!(BinaryOperation::Add, bp::ADDITIVE),
+            Token::Star => op!(BinaryOperation::Multiply, bp::MULTIPLICATIVE),
+            Token::Slash => op!(BinaryOperation::Divide, bp::MULTIPLICATIVE),
             Token::EndOfInput => break,
             _ => return Err(())
         };

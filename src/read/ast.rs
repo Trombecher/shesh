@@ -1,5 +1,6 @@
 use crate::read::bytes::Span;
 
+#[derive(Debug)]
 pub enum BinaryOperation {
     Add,
     Subtract,
@@ -23,6 +24,7 @@ pub enum BinaryOperation {
     GreaterThanOrEqual,
 }
 
+#[derive(Debug)]
 pub enum Expression<'a> {
     Binary {
         left: Box<Span<Expression<'a>>>,

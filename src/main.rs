@@ -37,7 +37,7 @@ fn main() -> ! {
 
         history_entry_index = None;
 
-        queue!(stdout, MoveToColumn(0)).expect("Failed to move cursor to column");
+        // queue!(stdout, MoveToColumn(0)).expect("Failed to move cursor to column");
 
         print_prompt();
 
@@ -55,10 +55,7 @@ fn main() -> ! {
 
                     match key {
                         KeyCode::Backspace => text_box.remove_char_left(),
-                        KeyCode::Enter => {
-                            queue!(stdout, Print("\n")).unwrap();
-                            break
-                        },
+                        KeyCode::Enter => break,
                         KeyCode::Left => {
                             text_box.move_cursor_n_chars_left(1);
                         }
@@ -113,36 +110,7 @@ fn main() -> ! {
             let partition = text_box.parts();
 
             if syntax_highlighting {
-                /*
-                let mut token_iterator = Lexer::new(partition);
 
-                loop {
-                    let token = match token_iterator.next() {
-                        Ok(token) => token,
-                        Err(_) => break,
-                    };
-
-                    if let Token::EndOfInput = token.value {
-                        break;
-                    }
-
-                    let (a, b) = text_box.range(token.range);
-
-                    for part in [a, b] {
-                        match &token.value {
-                            Token::Number(_) => {
-                                queue!(stdout, Print(part.cyan()))
-                            }
-                            Token::Identifier(_) => {
-                                queue!(stdout, Print(part.yellow()))
-                            }
-                            _ => {
-                                queue!(stdout, Print(part))
-                            }
-                        }.expect("Failed to print token");
-                    }
-                }
-                 */
             } else {
                 queue!(stdout, Print(partition.0), Print(partition.1))
                     .expect("Failed to queue partition");
@@ -154,6 +122,8 @@ fn main() -> ! {
                 MoveTo(text_box.chars_left_from_cursor() as u16 + min_cursor_position, y)
             ).expect("Failed to print input");
         }
+
+        execute!(stdout, Print("\n\r")).unwrap();
 
         text_box.move_cursor_to_end();
 
@@ -168,13 +138,14 @@ fn main() -> ! {
         let root_expression = if let Ok(expr) = parse(&mut iter, 0) {
             expr
         } else {
-            println!("Error: Failed to parse input");
+            execute!(stdout, Print("Error: Failed to parse input\n\r"));
             continue;
         };
 
+        let _ = stdout;
+
         disable_raw_mode().expect("Failed to disable raw mode");
         let result = eval(&mut root_scope, &root_expression);
-        enable_raw_mode().expect("Failed to enable raw mode");
 
         match result {
             Ok(Value::Nil) => {}
@@ -185,5 +156,7 @@ fn main() -> ! {
                 println!("Error: {:?}", runtime_error);
             }
         }
+
+        enable_raw_mode().expect("Failed to enable raw mode");
     }
 }

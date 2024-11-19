@@ -18,7 +18,13 @@ impl<'a> Buffered<'a> {
 
     #[inline]
     pub fn peek(&mut self) -> Result<&Span<Token<'a>>, ()> {
-        Ok(self.force_take.get_or_insert(self.lexer.next()?))
+        if self.force_take.is_some() {
+            return Ok(unsafe {
+                self.force_take.as_ref().unwrap_unchecked()
+            })
+        }
+
+        Ok(self.force_take.insert(self.lexer.next()?))
     }
 
     #[inline]

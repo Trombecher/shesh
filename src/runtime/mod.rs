@@ -1,19 +1,18 @@
-mod functions;
 mod scope;
+mod eval;
+mod resolve;
 
-use crate::read::ast::{BinaryOperation, Expression};
-use crate::read::bytes::Span;
 use crate::runtime::scope::Scope;
 use crossterm::style::{Color, SetForegroundColor};
 use std::fmt::{Display, Formatter};
-use std::str::SplitWhitespace;
 
 pub use scope::*;
+pub use eval::*;
 
 #[derive(Debug)]
 pub struct Variable {
-    mutable: bool,
-    value: Value,
+    pub mutable: bool,
+    pub value: Value,
 }
 
 #[derive(PartialEq, Debug)]
@@ -22,6 +21,15 @@ pub enum Value {
     Nil,
     Function(fn(scope: &mut Scope) -> Result<Value, RuntimeError>),
     String(String),
+}
+
+impl Value {
+    pub fn get_string(&self) -> Option<&str> {
+        match self {
+            Value::String(s) => Some(&s),
+            _ => None
+        }
+    }
 }
 
 impl Display for Value {
@@ -62,35 +70,5 @@ impl Display for Value {
 pub enum RuntimeError {
     UndefinedVariable,
     UnimplementedFeature,
-}
-
-pub fn eval(
-    scope: &mut Scope,
-    root_expression: &Span<Expression>
-) -> Result<Value, RuntimeError> {
-    match &root_expression.value {
-        Expression::Binary { left, operation, right } => {
-            let left = eval(scope, left)?;
-            let right = eval(scope, right)?;
-
-            match operation {
-                BinaryOperation::Add => Ok(Value::Number(
-                    match (left, right) {
-                        (Value::Number(left), Value::Number(right)) => left + right,
-                        _ => return Err(RuntimeError::UnimplementedFeature),
-                    }
-                )),
-                _ => Err(RuntimeError::UnimplementedFeature),
-            }
-        }
-        Expression::CommandInvocation(command) => {
-            match scope.get(*command) {
-                Some(Variable { value: Value::Function(f), .. }) => f(scope),
-                Some(Variable { value: Value::String(s), .. }) => Ok(Value::String(s.clone())),
-                _ => Err(RuntimeError::UndefinedVariable),
-            }
-        }
-        Expression::Number(num) => Ok(Value::Number(*num)),
-        Expression::String(s) => Ok(Value::String(s.to_string())),
-    }
+    UnimplementedError
 }
